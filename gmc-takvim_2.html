@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>GMC Fight Club – Özel Ders Takvimi</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥊</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:#0d0d0d;font-family:'Barlow Condensed','Arial Narrow',sans-serif;color:#f0f0f0;}
+    ::-webkit-scrollbar{width:5px;height:5px;}
+    ::-webkit-scrollbar-track{background:#111;}
+    ::-webkit-scrollbar-thumb{background:#c8102e;border-radius:3px;}
+    .branch-card{background:#111;border:1px solid #222;border-radius:8px;padding:36px 28px;cursor:pointer;transition:all .22s;text-align:center;min-width:200px;max-width:260px;flex:1;}
+    .branch-card:hover{border-color:#c8102e;background:#181818;transform:translateY(-3px);box-shadow:0 8px 32px rgba(200,16,46,.18);}
+    .admin-pill{background:rgba(200,16,46,.15);border:1px solid rgba(200,16,46,.4);color:#c8102e;padding:3px 10px;border-radius:2px;font-size:11px;font-weight:700;letter-spacing:1px;}
+    .ghost-btn{background:transparent;color:#777;border:1px solid #2a2a2a;padding:5px 14px;font-family:'Barlow Condensed',sans-serif;font-size:13px;cursor:pointer;border-radius:2px;transition:all .2s;letter-spacing:.5px;}
+    .ghost-btn:hover{border-color:#c8102e;color:#c8102e;}
+    .cal-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .day-head{background:#111;padding:10px 4px;text-align:center;font-weight:700;font-size:13px;letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid #c8102e;position:sticky;top:0;z-index:10;}
+    .time-label{background:#0d0d0d;padding:0 8px;display:flex;align-items:center;justify-content:flex-end;border-right:1px solid #1a1a1a;}
+    .slot{border:1px solid #181818;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .12s,border-color .12s;position:relative;min-height:46px;}
+    .slot.free{background:#0c1c0c;}
+    .slot.free:hover{background:#162e16;border-color:#2a6e2a;}
+    .slot.booked{background:#1c0808;cursor:default;}
+    .slot.booked:hover{background:#220a0a;}
+    .slot-free-dot{width:7px;height:7px;border-radius:50%;background:#2a8a2a;transition:transform .15s;}
+    .slot.free:hover .slot-free-dot{transform:scale(1.6);}
+    .slot-booked-inner{display:flex;flex-direction:column;align-items:center;gap:1px;padding:0 4px;width:100%;}
+    .slot-booked-name{font-size:10px;color:#c8102e;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center;}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(6px);}
+    .modal-box{background:#161616;border:1px solid #2a2a2a;border-top:3px solid #c8102e;padding:30px;width:400px;max-width:95vw;border-radius:4px;}
+    .book-btn{background:#c8102e;color:#fff;border:none;padding:10px 24px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:background .2s;}
+    .book-btn:hover{background:#e8192e;}
+    input[type=text],input[type=password]{width:100%;background:#111;border:1px solid #333;color:#f0f0f0;padding:11px 14px;font-family:'Barlow',sans-serif;font-size:15px;border-radius:2px;outline:none;transition:border-color .2s;}
+    input:focus{border-color:#c8102e;}
+    lbl{font-family:'Barlow',sans-serif;font-size:11px;color:#555;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:7px;}
+    .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:11px 26px;border-radius:4px;font-family:'Barlow',sans-serif;font-size:14px;z-index:200;animation:fadeUp .3s ease;white-space:nowrap;}
+    .toast.ok{background:#0e2a10;border:1px solid #2a6e2a;color:#6ddd6d;}
+    @keyframes fadeUp{from{opacity:0;transform:translate(-50%,16px);}to{opacity:1;transform:translate(-50%,0);}}
+    @media(max-width:600px){.modal-box{padding:22px;}}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script id="logo-data" type="text/plain">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</script>
+<script type="text/babel">
+const {useState,useEffect} = React;
+const LOGO_B64  = document.getElementById('logo-data').textContent.trim();
+const ADMIN_PIN = "1234";
+const BRANCHES  = ["Fulya GMC","Ortabayır GMC"];
+const COACHES   = ["Gürkan Hoca","Yahya Hoca"];
+const DAYS_SHORT= ["Pzt","Sal","Çar","Per","Cum","Cmt"];
+const DAYS_FULL = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+const TIMES=[];
+for(let h=10;h<=23;h++) TIMES.push(String(h).padStart(2,"0")+":00");
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyAdzh5JHxNMCEFoNE0Yh8oROpUWkXFir2U",
+  authDomain: "gmc-fight-club.firebaseapp.com",
+  databaseURL: "https://gmc-fight-club-default-rtdb.firebaseio.com",
+  projectId: "gmc-fight-club",
+  storageBucket: "gmc-fight-club.firebasestorage.app",
+  messagingSenderId: "588694512340",
+  appId: "1:588694512340:web:aea1bc3eb71f8090d51141"
+};
+if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+function dbKey(b,c){return b.replace(/ /g,'_')+"/"+c.replace(/ /g,'_');}
+
+function loadData(b,c){return {};} // not used directly, real-time via onValue
+function saveData(b,c,d){
+  db.ref("bookings/"+dbKey(b,c)).set(d);
+}
+function subscribeData(b,c,cb){
+  db.ref("bookings/"+dbKey(b,c)).on('value', snap=>{
+    cb(snap.val()||{});
+  });
+  return ()=>db.ref("bookings/"+dbKey(b,c)).off();
+}
+function endTime(t){const n=parseInt(t)+1;return(n===24?"00":String(n).padStart(2,"0"))+":00";}
+
+function BranchScreen({onSelect}){
+  return(
+    <div style={{minHeight:"100vh",background:"#0d0d0d",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div style={{position:"relative",marginBottom:26}}>
+        <div style={{width:112,height:112,borderRadius:"50%",overflow:"hidden",border:"2px solid #1e1e1e"}}>
+          <img src={"data:image/jpeg;base64,"+LOGO_B64} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="GMC"/>
+        </div>
+        <div style={{position:"absolute",bottom:-6,right:-6,background:"#c8102e",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>🥊</div>
+      </div>
+      <div style={{fontWeight:900,fontSize:30,letterSpacing:4,textTransform:"uppercase",lineHeight:1,textAlign:"center"}}>
+        GMC <span style={{color:"#c8102e"}}>FIGHT CLUB</span>
+      </div>
+      <div style={{fontSize:11,color:"#444",letterSpacing:3,textTransform:"uppercase",fontFamily:"'Barlow'",marginTop:6,marginBottom:44}}>Özel Ders Rezervasyonu</div>
+      <div style={{fontSize:11,color:"#555",fontFamily:"'Barlow'",letterSpacing:3,textTransform:"uppercase",marginBottom:16}}>📍 Şube Seçin</div>
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",justifyContent:"center"}}>
+        {BRANCHES.map(b=>(
+          <div key={b} className="branch-card" onClick={()=>onSelect(b)}>
+            <div style={{fontSize:38,marginBottom:14}}>🏋️</div>
+            <div style={{fontWeight:900,fontSize:21,letterSpacing:2,textTransform:"uppercase",lineHeight:1}}>{b.split(" ")[0]}</div>
+            <div style={{fontSize:13,color:"#c8102e",fontFamily:"'Barlow Condensed'",fontWeight:700,letterSpacing:2,marginTop:5,textTransform:"uppercase"}}>{b.split(" ")[1]||""}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CoachScreen({branch,onSelect,onBack}){
+  return(
+    <div style={{minHeight:"100vh",background:"#0d0d0d",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div style={{position:"relative",marginBottom:26}}>
+        <div style={{width:112,height:112,borderRadius:"50%",overflow:"hidden",border:"2px solid #1e1e1e"}}>
+          <img src={"data:image/jpeg;base64,"+LOGO_B64} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="GMC"/>
+        </div>
+        <div style={{position:"absolute",bottom:-6,right:-6,background:"#c8102e",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>🥊</div>
+      </div>
+      <div style={{fontWeight:900,fontSize:30,letterSpacing:4,textTransform:"uppercase",lineHeight:1,textAlign:"center"}}>
+        GMC <span style={{color:"#c8102e"}}>FIGHT CLUB</span>
+      </div>
+      <div style={{fontSize:12,color:"#c8102e",letterSpacing:3,textTransform:"uppercase",fontFamily:"'Barlow Condensed'",fontWeight:700,marginTop:6,marginBottom:6}}>{branch}</div>
+      <div style={{fontSize:11,color:"#444",letterSpacing:3,textTransform:"uppercase",fontFamily:"'Barlow'",marginBottom:44}}>Özel Ders Rezervasyonu</div>
+      <div style={{fontSize:11,color:"#555",fontFamily:"'Barlow'",letterSpacing:3,textTransform:"uppercase",marginBottom:16}}>👤 Hoca Seçin</div>
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",justifyContent:"center"}}>
+        {COACHES.map(c=>(
+          <div key={c} className="branch-card" onClick={()=>onSelect(c)}>
+            <div style={{fontSize:44,marginBottom:14}}>🥊</div>
+            <div style={{fontWeight:900,fontSize:20,letterSpacing:1,textTransform:"uppercase",lineHeight:1,color:"#f0f0f0"}}>{c.split(" ")[0]}</div>
+            <div style={{fontSize:14,color:"#c8102e",fontFamily:"'Barlow Condensed'",fontWeight:700,letterSpacing:2,marginTop:5,textTransform:"uppercase"}}>{c.split(" ")[1]||""}</div>
+          </div>
+        ))}
+      </div>
+      <button onClick={onBack} style={{marginTop:32,background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:11,fontFamily:"'Barlow'",letterSpacing:2,textTransform:"uppercase"}}>← Şube Değiştir</button>
+    </div>
+  );
+}
+function Schedule({branch,coach,onBack}){
+  const [bookings,setBookings]=useState({});
+  const [loading,setLoading]=useState(true);
+  const [mode,setMode]=useState("user");
+  const [pinInput,setPinInput]=useState("");
+  const [pinError,setPinError]=useState(false);
+  const [showPin,setShowPin]=useState(false);
+  const [modal,setModal]=useState(null);
+  const [nameInput,setNameInput]=useState("");
+  const [nameError,setNameError]=useState("");
+  const [toast,setToast]=useState(null);
+
+  function showToast(msg){setToast(msg);setTimeout(()=>setToast(null),3000);}
+  function save(u){saveData(branch,coach,u);}
+
+  useEffect(()=>{
+    setLoading(true);
+    const unsub = subscribeData(branch,coach,(data)=>{
+      setBookings(data);
+      setLoading(false);
+    });
+    return unsub;
+  },[branch,coach]);
+  function key(d,t){return d+"|"+t;}
+
+  function clickSlot(day,time){
+    const k=key(day,time);
+    const booked=bookings[k];
+    if(booked){
+      if(mode==="admin") setModal({day,time,adminView:true,name:booked});
+      return;
+    }
+    setModal({day,time});
+    setNameInput("");
+    setNameError("");
+  }
+
+  function confirmBook(){
+    if(!nameInput.trim()){setNameError("Lütfen adınızı girin.");return;}
+    const k=key(modal.day,modal.time);
+    if(bookings[k]){setNameError("Bu saat dolu!");return;}
+    save({...bookings,[k]:nameInput.trim()});
+    setModal(null);
+    showToast(`✅ ${modal.day} ${modal.time} rezervasyonu alındı!`);
+  }
+
+  function cancelBooking(day,time){
+    const u={...bookings};
+    delete u[key(day,time)];
+    save(u);
+    setModal(null);
+    showToast("🗑️ Rezervasyon iptal edildi.");
+  }
+
+  function loginAdmin(){
+    if(pinInput===ADMIN_PIN){setMode("admin");setShowPin(false);setPinInput("");setPinError(false);}
+    else setPinError(true);
+  }
+
+  const booked=Object.keys(bookings).length;
+  const total=DAYS_FULL.length*TIMES.length;
+  const cols=`56px repeat(${DAYS_FULL.length},1fr)`;
+
+  if(loading) return(
+    <div style={{minHeight:"100vh",background:"#0d0d0d",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
+      <img src={"data:image/jpeg;base64,"+LOGO_B64} style={{width:60,height:60,borderRadius:"50%",objectFit:"cover",border:"2px solid #c8102e",animation:"pulse 1.2s ease-in-out infinite"}} alt="GMC"/>
+      <div style={{color:"#777",fontSize:13,letterSpacing:2,fontWeight:600}}>YÜKLENIYOR...</div>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+    </div>
+  );
+
+  return(
+    <div style={{minHeight:"100vh",background:"#0d0d0d"}}>
+      {/* Header */}
+      <header style={{borderBottom:"1px solid #1a1a1a",padding:"0 14px",display:"flex",alignItems:"center",justifyContent:"space-between",height:54,position:"sticky",top:0,background:"rgba(13,13,13,.97)",backdropFilter:"blur(8px)",zIndex:50}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <img src={"data:image/jpeg;base64,"+LOGO_B64} style={{width:34,height:34,borderRadius:"50%",objectFit:"cover",border:"1px solid #222"}} alt="GMC"/>
+          <div>
+            <div style={{fontWeight:900,fontSize:16,letterSpacing:2,textTransform:"uppercase",lineHeight:1}}>
+              <span style={{color:"#c8102e"}}>{branch.split(" ")[0]}</span> {branch.split(" ").slice(1).join(" ")}
+            </div>
+            <div style={{fontSize:11,color:"#555",fontFamily:"'Barlow'",marginTop:1}}>
+              👤 {coach} &nbsp;·&nbsp;
+              <button onClick={onBack} style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:10,fontFamily:"'Barlow'",letterSpacing:1.5,padding:0,textTransform:"uppercase"}}>← Hoca Değiştir</button>
+            </div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {mode==="admin"&&<span className="admin-pill">ADMİN</span>}
+          {mode==="user"
+            ?<button className="ghost-btn" onClick={()=>setShowPin(true)}>🔐 Admin</button>
+            :<button className="ghost-btn" onClick={()=>setMode("user")}>Çıkış</button>
+          }
+        </div>
+      </header>
+
+      {/* Stats bar */}
+      <div style={{background:"#0f0f0f",borderBottom:"1px solid #1a1a1a",padding:"8px 14px",display:"flex",gap:20,alignItems:"center"}}>
+        <div style={{display:"flex",gap:16,alignItems:"center"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:"#2a8a2a"}}></div>
+            <span style={{fontFamily:"'Barlow'",fontSize:12,color:"#555"}}>{total-booked} Müsait</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:"#c8102e"}}></div>
+            <span style={{fontFamily:"'Barlow'",fontSize:12,color:"#555"}}>{booked} Dolu</span>
+          </div>
+        </div>
+        <div style={{marginLeft:"auto",fontFamily:"'Barlow'",fontSize:11,color:"#333",letterSpacing:1}}>
+          Hf. {booked}/{total}
+        </div>
+      </div>
+
+      {/* Calendar */}
+      <div style={{padding:"12px 10px 60px"}}>
+        <div className="cal-wrap">
+          <div style={{display:"grid",gridTemplateColumns:cols,minWidth:520}}>
+
+            {/* Header */}
+            <div style={{background:"#0d0d0d",borderBottom:"2px solid #c8102e",minHeight:46}}></div>
+            {DAYS_FULL.map((d,i)=>(
+              <div key={d} className="day-head">
+                <div style={{color:"#c8102e",fontSize:14}}>{DAYS_SHORT[i]}</div>
+                <div style={{fontSize:9,color:"#333",fontFamily:"'Barlow'",marginTop:1,letterSpacing:.5}}>{d.slice(0,3).toUpperCase()}</div>
+              </div>
+            ))}
+
+            {/* Rows */}
+            {TIMES.map(time=>[
+              <div key={"t"+time} className="time-label">
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:11,color:"#555",fontWeight:700,lineHeight:1}}>{time}</div>
+                  <div style={{fontSize:9,color:"#2a2a2a",marginTop:1}}>–{endTime(time)}</div>
+                </div>
+              </div>,
+              ...DAYS_FULL.map(day=>{
+                const k=key(day,time);
+                const b=bookings[k];
+                return(
+                  <div key={day+time} className={`slot ${b?"booked":"free"}`}
+                    onClick={()=>clickSlot(day,time)}
+                    title={b?(mode==="admin"?b:"Dolu"):"Rezervasyon için tıkla"}>
+                    {b?(
+                      <div className="slot-booked-inner">
+                        <div style={{fontSize:12}}>🔴</div>
+                        {mode==="admin"&&<div className="slot-booked-name">{b}</div>}
+                      </div>
+                    ):(
+                      <div className="slot-free-dot"></div>
+                    )}
+                  </div>
+                );
+              })
+            ])}
+          </div>
+        </div>
+      </div>
+
+      {/* Book Modal */}
+      {modal&&!modal.adminView&&(
+        <div className="modal-overlay" onClick={()=>setModal(null)}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()}>
+            <div style={{fontWeight:700,fontSize:11,letterSpacing:3,textTransform:"uppercase",color:"#555",marginBottom:4}}>Özel Ders</div>
+            <div style={{fontWeight:900,fontSize:24,color:"#c8102e",marginBottom:2}}>{modal.day}</div>
+            <div style={{fontWeight:900,fontSize:40,lineHeight:1,marginBottom:2}}>{modal.time}</div>
+            <div style={{fontFamily:"'Barlow'",fontSize:13,color:"#444",marginBottom:22}}>{modal.time} – {endTime(modal.time)} · 1 Saatlik Özel Ders</div>
+            <lbl>Ad Soyad</lbl>
+            <input type="text" placeholder="Ahmet Yılmaz"
+              value={nameInput}
+              onChange={e=>{setNameInput(e.target.value);setNameError("");}}
+              onKeyDown={e=>e.key==="Enter"&&confirmBook()} autoFocus/>
+            {nameError&&<div style={{color:"#c8102e",fontSize:13,marginTop:8,fontFamily:"'Barlow'"}}>{nameError}</div>}
+            <div style={{display:"flex",gap:10,marginTop:20}}>
+              <button className="book-btn" onClick={confirmBook} style={{flex:1}}>Rezervasyon Yap</button>
+              <button className="ghost-btn" onClick={()=>setModal(null)}>İptal</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin detail modal */}
+      {modal&&modal.adminView&&(
+        <div className="modal-overlay" onClick={()=>setModal(null)}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()}>
+            <div style={{fontWeight:700,fontSize:11,letterSpacing:3,textTransform:"uppercase",color:"#555",marginBottom:4}}>Rezervasyon</div>
+            <div style={{fontWeight:900,fontSize:24,color:"#c8102e",marginBottom:2}}>{modal.day}</div>
+            <div style={{fontWeight:900,fontSize:40,lineHeight:1,marginBottom:16}}>{modal.time}</div>
+            <div style={{background:"#111",border:"1px solid #222",borderRadius:4,padding:"14px 16px",marginBottom:20}}>
+              <lbl>Kayıtlı Kişi</lbl>
+              <div style={{fontWeight:700,fontSize:20}}>{modal.name}</div>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button className="book-btn" style={{background:"#222",color:"#888",flex:1}} onClick={()=>setModal(null)}>Kapat</button>
+              <button className="book-btn" style={{background:"#6e0a0a",flex:1}} onClick={()=>cancelBooking(modal.day,modal.time)}>🗑️ İptal Et</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PIN Modal */}
+      {showPin&&(
+        <div className="modal-overlay" onClick={()=>{setShowPin(false);setPinInput("");setPinError(false);}}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()}>
+            <div style={{fontWeight:900,fontSize:20,textTransform:"uppercase",letterSpacing:2,marginBottom:20}}>Admin Girişi</div>
+            <lbl>PIN Kodu</lbl>
+            <input type="password" placeholder="••••" value={pinInput}
+              onChange={e=>{setPinInput(e.target.value);setPinError(false);}}
+              onKeyDown={e=>e.key==="Enter"&&loginAdmin()} autoFocus/>
+            {pinError&&<div style={{color:"#c8102e",fontSize:13,marginTop:8,fontFamily:"'Barlow'"}}>Hatalı PIN.</div>}
+            <div style={{display:"flex",gap:10,marginTop:20}}>
+              <button className="book-btn" onClick={loginAdmin} style={{flex:1}}>Giriş</button>
+              <button className="ghost-btn" onClick={()=>{setShowPin(false);setPinInput("");setPinError(false);}}>İptal</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast&&<div className="toast ok">{toast}</div>}
+    </div>
+  );
+}
+
+function App(){
+  const [branch,setBranch]=useState(null);
+  const [coach,setCoach]=useState(null);
+  if(!branch) return <BranchScreen onSelect={setBranch}/>;
+  if(!coach)  return <CoachScreen branch={branch} onSelect={setCoach} onBack={()=>setBranch(null)}/>;
+  return <Schedule branch={branch} coach={coach} onBack={()=>setCoach(null)}/>;
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
