@@ -1,3 +1,6 @@
+
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -61,7 +64,6 @@ const DAYS_FULL = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartes
 const TIMES=[];
 for(let h=10;h<=23;h++) TIMES.push(String(h).padStart(2,"0")+":00");
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAdzh5JHxNMCEFoNE0Yh8oROpUWkXFir2U",
   authDomain: "gmc-fight-club.firebaseapp.com",
@@ -76,7 +78,6 @@ const db = firebase.database();
 
 function dbKey(b,c){return b.replace(/ /g,'_')+"/"+c.replace(/ /g,'_');}
 
-function loadData(b,c){return {};} // not used directly, real-time via onValue
 function saveData(b,c,d){
   db.ref("bookings/"+dbKey(b,c)).set(d);
 }
